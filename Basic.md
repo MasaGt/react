@@ -16,7 +16,7 @@ npm start
 
 #### React + TypeScriptで開発環境を作る
 ```bash
-npx create-react-app <プロジェクト名>
+npx create-react-app <プロジェクト名> --template typescript
 ```
 
 #### Reactアプリの実行停止
