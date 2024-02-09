@@ -47,13 +47,105 @@ npm install -D @testing-library/jest-dom
 expect(component).toBeInTheDocument();
 ```
 
+---
+
+### 基本的な使い方
+
+- "@testing-library/react"のrender関数を使ってテスト対象コンポーネントをレンダリングする
+
+```js
+import { render } from "@testing-library/react";
+import { Component } from "path of this component";
+
+test("test case1", () => {
+    // コンポーネントをレンダリングする
+    render(<Component />);
+});
+```
+
+<br>
+
+- - "@testing-library/react"のscreenオブジェクトは仮想の画面にレンダリングされた要素を検索したり、debugで確認できたりする
+
+```js
+import { render, screen } from "@testing-library/react";
+import { Component } from "path of this component";
+
+test("test case1", () => {
+    render(<Component />);
+
+    // 引数の文字列を持つ最初の要素を取得する
+    const msgElem = screen.getByText("Hello");
+    
+    // 仮想の画面にどのような構造でdomがレンダリングされているか確認できる
+    screen.debug();
+
+});
+```
+
+<br>
+
+- Jestや@testing-library/jest-domで提供されているmaxtchersを利用して結果を評価する
+```js
+import { render, screen } from "@testing-library/react";
+import { Component } from "path of this component";
+
+test("test case1", () => {
+    render(<Component />);
+    const msgElem = screen.getByText("Hello");
+
+    // @testing-library/jest-domが提供する関数で指定するクラス名が付与されているかをチェックする
+    expect(msg.Elem).toHaveClass('message');
+});
+
+```
 
 ---
 
-### 使い方
-TODO: テストの例を追加する
+###  ユーザーイベントを発火させる
 
+- [参照元](https://zenn.dev/k_log24/articles/4c1cd37ff0ca50)
+
+- "@testing-library/user-event"にある fireEvent オブジェクトからユーザーイベントを発火できる
 ```js
+import { fireEvent } from '@testing-library/react';
+
+fireEvent.click(screen.getByRole('button'));
 ```
 
-    
+<br>
+
+- "@testing-library/react"にある userEvent オブジェクトからもユーザーイベントを発火できる
+```js
+import userEvent from '@testing-library/user-event';
+
+userEvent.click(screen.getByRole('button'));
+```
+
+<br>
+
+- fireEventとuserEventのどちらがいいのか
+    - 特に制約がなければuserEventを使ったほいがいい
+        - 理由1: Testing Library公式でそう勧められているから
+        - 理由2: userEventの方が簡潔に書けるらしい
+        - 理由3: 実際のユーザーの操作により近いのはuserEventの方だから
+
+- 上記の詳しい解説
+
+    - 公式での説明は[こちらを参照](https://testing-library.com/docs/dom-testing-library/api-events/)
+
+    - userEventの方が簡潔に書ける例
+    ```js
+    // input項目に対してtestという文字を入力する
+
+    // fireEvent
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'test' } });
+
+    // userEvent
+    userEvent.type(screen.getByRole('textbox'), 'test')
+    ```
+
+    - fireEventとuserEventの明確な違い
+        - fireEventはdisableなインプット項目に対してもinputイベントを発火できてしまう(ユーザーはそのような操作はできないのにも関わらず)
+
+        - userEventはdisableなインプット項目に対してinputイベントを発火できない(実際のユーザーと同じ状況での操作)
