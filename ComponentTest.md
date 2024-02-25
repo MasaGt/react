@@ -149,3 +149,141 @@ userEvent.click(screen.getByRole('button'));
         - fireEventはdisableなインプット項目に対してもinputイベントを発火できてしまう(ユーザーはそのような操作はできないのにも関わらず)
 
         - userEventはdisableなインプット項目に対してinputイベントを発火できない(実際のユーザーと同じ状況での操作)
+
+        - textBoxに複数文字を入力する操作がテストで必要な場合
+            - fireEvent() は1度に全ての文字が入力される
+            - userEvent() は1文字ずつ入力するのをシミュレートするため、複数の入力イベントが発火する
+---
+
+### userEvent　と fireEvent の注意点
+
+- userEvent は非同期で画面の更新が行われるので、場合によっては await で画面の更新を待つ必要がある
+
+<br>
+
+例: ボタン押下でテキストの要素を 表示 / 非表示 に切り替えるコンポーネント
+
+```js
+// テスト対象コンポーネント
+
+export const MyComponent = () => {
+    const [isClicked, setIsClicked] = useState(false);
+
+    const onClick = () => {
+        setIsClicked(!isClicked);
+    };
+
+    return (
+        <>
+            {isClicked && <p>Button Clicked</p>}
+            <button onClick={onClick}>switch text</button>
+        </>
+    )
+}
+```
+
+<br>
+
+以下はうまくテストができないコード
+
+```js
+// テストコード　
+
+test("MyComponent test", () => {
+    render(<MyComponent />);
+
+    const button = screen.getByRole("button");
+    
+    // クリックしたら、非同期のsetIsClickが動く
+    // しかし、以下のコードはその処理の結果&画面の更新を待たずに後続処理へ続く
+    userEvent.click(button);
+
+    expect(screen.getByText("Button Clicked")).toBeInTheDocument();
+    /**
+     * fail
+     * -> クリックしてから、画面の更新を待たずにexpectしたから
+     */
+});
+```
+
+<br>
+
+上記の問題を防ぐためには4つ方法がある
+1. await で userEvent の画面更新を待つ
+    ```js
+    // テストコード
+    test("test", () => {
+        render(<MyComponent />);
+        const button = screen.getByRole("button");
+
+        // await で画面の更新を待ってから後続処理を行う
+        userEvent.click(button);
+
+        expect(screen.getByText("Button Clicked")).toBeInTheDocument();
+    });
+    ```
+
+<br>
+
+2. findBy 系の要素検索関数を利用する  
+    - Warning: ~~ was not wrapped in act という警告が表示される事がある
+    ```js
+    // テストコード
+    test("test", () => {
+        render(<MyComponent />);
+        const button = screen.getByRole("button");
+        userEvent.click(button);
+
+        // findByで 1000 ms 待ってから画面の要素を検索する
+        expect(await screen.findByText("Button Clicked")).toBeInTheDocument();
+    });
+    ```
+
+<br>
+
+3. waitFor を使う
+    - await キーワードと一緒に使うこと (waitForがPromiseを返すかもしれないかららしい)
+    ```js
+    // テストコード
+
+    test("test", async () => {
+        render(<MyComponent />);
+        const button = screen.getByRole("button");
+        userEvent.click(button);
+
+        // 画面の更新を待ってから行いたい処理をwaitForで囲む
+        // 実際は、コールバック内のexpectの条件が満たされるまでwaitForのコールバックを何回も呼び出すみたい
+        await waitFor(() => {
+            expect(screen.getByText("Button Clicked")).toBeInTheDocument();
+        });
+    });
+    ```
+<br>
+
+4. userEvent の代わりに fireEvent を使う
+    ```js
+    // テストコード
+    import { firEvent } from "@testing-library/react";
+
+    test("test", () => {
+        render(<MyComponent />);
+        const button = screen.getByRole("button");
+
+        // クリックイベント発火
+        // fireEventは画面の更新が終わるまで待つ
+        // (内部がactで囲まれているかららしい)
+        fireEvent.click(button);
+
+        expect(screen.getByText("Button Clicked")).toBeInTheDocument();
+    });
+    ```
+
+---
+
+### act と waitFor
+
+TODO: act と waitFor のそれぞれの特徴/使い方 および 違いを記載する
+
+#### act 
+
+#### waitFor
