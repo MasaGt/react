@@ -282,8 +282,78 @@ test("MyComponent test", () => {
 
 ### act と waitFor
 
-TODO: act と waitFor のそれぞれの特徴/使い方 および 違いを記載する
+前提: 以下のようなコンポーネントがあるとする  
+
+- ボタンと、そのボタンのクリック数を表示するコンポーネント
+
+```js
+export const Counter = () => {
+    const [count, setCount] = useState(0);
+    const onClick = () => {
+        setCount((num) => num++);
+    };
+
+    retrun (
+        <>
+            <p>count: {count}</p>
+            <button onClick={onClick}>add count</button>
+        </>
+    )
+}
+```
 
 #### act 
 
+    -   何かの処理によって、コンポーネントの 非同期処理 / 再レンダリング が発生し、その結果がコンポーネントに反映されるまで待ちたい時に囲むヘルパーメソッド(多分 1000 ms 待つと思う)
+
+    - 基本的には React Testing Library を使えば、内部を act でラップしている関数があるので、それを利用することで、 act の　入れ子を防ぐことができる
+
+```js
+// テストコード
+test("act() sample", () => {
+    render(<Counter />);
+
+    const btn = scree,getByRole("button", {name: "add count"});
+
+    // コンポーネントへの再レンダリングを発生させる処理を囲む
+    act(() => {
+        userEvent.click(btn);
+    });
+
+    expect(screen.gteByText("count:1")).toBeInTheDocument();
+});
+```
+
 #### waitFor
+    - 何かの処理によって、コンポーネントの 非同期処理 / 再レンダリング が発生し、　その後の処理で待ちたい場合に使うメソッド
+
+    - 基本的にマッチャーの結果を再レンダリングまで待ちたい場合に使う
+
+    - 実際はコールバックに渡されたマッチャーが成功するまで、もしくは 1000 ms 経過するまでコールバック関数を呼び続けるというもの
+
+```js
+// テストコード
+test("waitFor() sample", async () => {
+    render(<Counter />);
+
+    const btn = screen.getByRole("button", {name: "add count"});
+
+    userEvent.click(btn);
+    
+    
+    // コールバックの関数の実行を再レンダリングされるまで待ちたい
+    // 実際はコールバックの関数を1000ms経過するまで何度も呼び出している
+    await waitFor(() => {
+        expect(screen.gteByText("count:1")).toBeInTheDocument();
+    });
+});
+```
+
+<br>
+
+#### 使い分け
+
+- 基本的には waitFor でアサーションを囲むことが多い
+    -> もしくは findBy 系を使うこともある
+
+- act に関しては、 Time のモッキングの際に jest.runAllTimers() などを利用する際に act で囲む必要がある場合に使う程度
