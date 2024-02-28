@@ -116,10 +116,32 @@ fireEvent.click(screen.getByRole('button'));
 <br>
 
 - "@testing-library/react"にある userEvent オブジェクトからもユーザーイベントを発火できる
+    - React V14 から userEvent の使い方が以下のように変わった
+        - userEvent.setup()　でユーザーインベントオブジェクトを取得し、のオブジェクトの持つ関数からイベント発火をする
+        - ユーザーイベントオブジェクト.イベント発火関数() はPromiseを返すので、テストのコールバック関数をasyncで囲み、イベント発火関数をawaitで処理を待つ必要がある
 ```js
+//  React v13までの使い方
 import userEvent from '@testing-library/user-event';
 
 userEvent.click(screen.getByRole('button'));
+```
+
+```js
+// React v14からの使い方
+const user = null;
+
+beforeEach(() => {
+    // userEvent.setup()からオブジェクト取得
+    user = userEvent.setup();
+});
+
+test("Click event test", async () => {
+    render(<Component />);
+
+    // userオブジェクトの持つ関数からイベント発火
+    // Promiseを返すようになったので、awaitで待つ or then で後続処理を行う必要がある
+    await user.click(screen.getByRole("button"));
+});
 ```
 
 <br>
@@ -155,7 +177,9 @@ userEvent.click(screen.getByRole('button'));
             - userEvent() は1文字ずつ入力するのをシミュレートするため、複数の入力イベントが発火する
 ---
 
-### userEvent　と fireEvent の注意点
+### userEvent (React v13まで) 　と fireEvent の注意点
+
+**\*ここでの userEvent は React V13 までの userEvent を指している**
 
 - userEvent は非同期で画面の更新が行われるので、場合によっては await で画面の更新を待つ必要がある
 
